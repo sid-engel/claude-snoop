@@ -27,7 +27,7 @@ Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 4. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
 5. **Inject Vulns** — Adds vulnerability findings to `findings.json`
 6. **Read Design** — Reads `config/design.md` for report styling (colors, fonts, spacing, severity badges)
-7. **Generate HTML** — Creates HTML report with inline CSS from findings.json + design.md
+7. **Generate HTML** — Creates HTML report with inline CSS(HTML + CSS Claude generated) from findings.json data + design.md directive.
 8. **Render PDF** — Calls weasyprint to convert HTML → PDF with:
    - Cover page (title, target, timestamp)
    - Executive summary (host count, port count, vuln count)
@@ -122,6 +122,7 @@ Analysis uses Claude's training knowledge — no external API calls.
 ## Known Limitations
 
 - **MAC Addresses** — Not captured in discovery results. Nmap's host discovery scan does not return MAC address data in most environments (Docker, VMs, certain network configs). This is a network layer limitation, not a tool limitation.
+- **Token Utilization** — This tool uses tokens, there are alternatives that make external API calls for vuln/update discovery, and better local-written talent for report generation(instead of having claude write HTML+CSS every time). But, I'm a script kiddie so here we are.
 
 ---
 
