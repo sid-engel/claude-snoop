@@ -53,4 +53,4 @@ echo "   Title  : $TITLE"
 echo ""
 
 # Hand off to Claude Code — it reads CLAUDE.md and takes it from here
-claude --print "Run a full claude-snoop audit. Target: $TARGET. Report title: $TITLE. Follow the instructions in CLAUDE.md."
+claude "Run a full claude-snoop audit. Target: $TARGET. Report title: $TITLE. Follow the instructions in CLAUDE.md."

@@ -24,22 +24,16 @@ python3 scripts/scan.py --target <TARGET> --mode discovery
 Parse the JSON output. If no hosts are found, stop and tell the user.
 
 ### Step 2 — Ports & Services
-Enumerate open ports on discovered hosts. Use the live host IPs from Step 1 as targets (comma-separated or one at a time).
+Enumerate open ports on discovered hosts. **Run one host at a time** to ensure nmap processes each properly.
+
+For each discovered host IP from Step 1:
 
 ```bash
 python3 scripts/scan.py --target <HOST_IP> --mode ports
 ```
 
-Run this for each discovered host, or pass the original subnet — nmap will handle it.
-
-### Step 3 — Vulnerability Check
-Run vuln scripts against discovered hosts.
-
-```bash
-python3 scripts/scan.py --target <TARGET> --mode vulns
-```
-
-Note: This step can take a while. Let the user know it's running.
+Print progress before each scan: `Scanning <HOST_IP> for open ports...`
+Collect JSON output from each scan into an array.
 
 ## Combining Findings
 
@@ -53,8 +47,7 @@ After all scans complete, write a single JSON file structured like this:
     "tool": "claude-snoop"
   },
   "discovery": { ...output from step 1... },
-  "ports":     { ...output from step 2... },
-  "vulns":     { ...output from step 3... }
+  "ports":     { ...output from step 2... }
 }
 ```
 
@@ -73,7 +66,6 @@ Use the target as the title if none is provided (e.g. "Audit — 192.168.1.0/24"
 Tell the user:
 - How many hosts were discovered
 - How many open ports were found
-- How many vulnerability findings, broken down by severity
 - Where the PDF report is
 
 ## Rules

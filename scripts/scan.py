@@ -6,7 +6,6 @@ Returns structured JSON for consumption by the report generator.
 Usage:
     python3 scan.py --target 192.168.1.0/24 --mode discovery
     python3 scan.py --target 192.168.1.0/24 --mode ports
-    python3 scan.py --target 192.168.1.1 --mode vulns
 """
 
 import argparse
@@ -25,14 +24,6 @@ SCAN_MODES = {
     "ports": {
         "description": "Port and service enumeration on live hosts",
         "flags": ["-sV", "-T5", "--open", "--top-ports", "100", "--min-rate", "1000"],
-    },
-    "vulns": {
-        "description": "Vulnerability check using nmap scripts",
-        "flags": ["-sV", "-T5", "--min-rate", "1000", "--script=vuln"],
-    },
-    "quick": {
-        "description": "Quick scan — top 1000 ports, service detection",
-        "flags": ["-sV", "-T4", "--open"],
     },
 }
 
