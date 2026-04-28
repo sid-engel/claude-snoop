@@ -1,8 +1,8 @@
 # 🐾 claude-snoop
 
-> ⚠️ **Super early alpha. Here be dragons.**
+> ⚠️ **Super vibe coded. Super developmental**
 
-AI-powered network audit tool built on [Claude Code](https://claude.ai/code). Orchestrates host discovery, port scanning, and vulnerability analysis — then generates a PDF report.
+AI-powered network audit tool built on [Claude Code](https://claude.ai/code). Orchestrates host discovery, port scanning, and vulnerability analysis — then generates a customizable PDF report.
 
 ---
 
@@ -115,4 +115,4 @@ Issues and PRs welcome. See CLAUDE.md for internal orchestration logic.
 
 ## License
 
-MIT
+None, idk use it as much as you want.
