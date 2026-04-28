@@ -10,16 +10,10 @@ AI-powered network audit tool built on [Claude Code](https://claude.ai/code). Or
 
 ```bash
 # Scan a subnet, get PDF report
-./claude-snoop.sh --target 192.168.1.0/24
-
-# With custom output path and title
-./claude-snoop.sh --target 192.168.1.0/24 --output audit.pdf --title "Acme Corp Audit"
-
-# Parallel port scans (default: 4 workers)
-./claude-snoop.sh --target 192.168.1.0/24 --workers 8
+./claude-snoop.sh --target 192.168.1.0/24 --title "Client Network"
 ```
 
-Output → `output/report.pdf` (or custom path)
+Output → `output/report.pdf`
 
 ---
 
@@ -59,14 +53,12 @@ pip install -r requirements.txt
 
 **Options:**
 - `--target` (required) — IP, range, or subnet (e.g., `192.168.1.0/24`, `10.0.0.1`)
-- `--output` (optional) — PDF output path (default: `output/report.pdf`)
 - `--title` (optional) — Report title (default: `"Audit — <TARGET>"`)
-- `--workers` (optional) — Parallel port scan workers (default: 4)
 
 ### Direct Orchestration
 
 ```bash
-python3 scripts/orchestrate.py --target 192.168.1.0/24 --output report.pdf
+python3 scripts/orchestrate.py --target 192.168.1.0/24
 ```
 
 ---
