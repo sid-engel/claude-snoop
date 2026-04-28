@@ -13,11 +13,28 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+import os
 
 
 def load_findings(path: str) -> dict:
     with open(path) as f:
         return json.load(f)
+
+
+def load_design() -> dict:
+    """Load design config from config/design.json."""
+    config_path = Path(__file__).parent.parent / "config" / "design.json"
+
+    if not config_path.exists():
+        print(f"[error] Design config not found: {config_path}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        with open(config_path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"[error] Failed to load design config: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def render_discovery(hosts: list) -> str:
@@ -84,9 +101,14 @@ def render_ports(hosts: list) -> str:
     return html or "<p>No open ports found.</p>"
 
 
-def render_vulns(vulns: list) -> str:
+def render_vulns(vulns: list, design: dict) -> str:
     if not vulns:
         return "<p>No vulnerabilities found.</p>"
+
+    severity_config = design.get("severity", {})
+    mono_font = design.get("fonts", {}).get("mono", "monospace")
+    badge_padding = design.get("opacity", {}).get("badge_padding", "2px 6px")
+    badge_radius = design.get("opacity", {}).get("badge_radius", "3px")
 
     html = ""
     for host in vulns:
@@ -101,20 +123,25 @@ def render_vulns(vulns: list) -> str:
                 cve = finding.get("cve", "—")
                 severity = finding.get("severity", "informational").lower()
                 description = finding.get("description", "—")
-                color = "#d32f2f" if severity == "high" else "#f57c00" if severity == "medium" else "#fbc02d"
+                sev_config = severity_config.get(severity, severity_config.get("informational", {}))
+                color = sev_config.get("color", "#1976d2")
+                label = sev_config.get("label", severity.upper())
                 rows += f"""
             <tr>
-                <td style="font-family: monospace; font-size: 9px;">{cve}</td>
-                <td><span style="background: {color}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600;">{severity.upper()}</span></td>
+                <td style="font-family: {mono_font}; font-size: 9px;">{cve}</td>
+                <td><span style="background: {color}; color: white; padding: {badge_padding}; border-radius: {badge_radius}; font-size: 9px; font-weight: 600;">{label}</span></td>
                 <td>{description}</td>
             </tr>"""
             elif "update_available" in finding:
                 update_ver = finding.get("update_available", "—")
                 release_date = finding.get("release_date", "—")
+                upd_config = severity_config.get("update_available", {})
+                color = upd_config.get("color", "#388e3c")
+                label = upd_config.get("label", "AVAILABLE")
                 rows += f"""
             <tr>
-                <td style="font-family: monospace; font-size: 9px;">UPDATE</td>
-                <td><span style="background: #388e3c; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600;">AVAILABLE</span></td>
+                <td style="font-family: {mono_font}; font-size: 9px;">UPDATE</td>
+                <td><span style="background: {color}; color: white; padding: {badge_padding}; border-radius: {badge_radius}; font-size: 9px; font-weight: 600;">{label}</span></td>
                 <td>Version {update_ver} ({release_date})</td>
             </tr>"""
 
@@ -136,7 +163,7 @@ def render_vulns(vulns: list) -> str:
 
 
 
-def render_html(data: dict, title: str) -> str:
+def render_html(data: dict, title: str, design: dict) -> str:
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     target = data.get("meta", {}).get("target", "Unknown")
 
@@ -146,6 +173,26 @@ def render_html(data: dict, title: str) -> str:
 
     host_count = len(discovery_results)
 
+    # Extract design config
+    colors = design.get("colors", {})
+    fonts = design.get("fonts", {})
+    spacing = design.get("spacing", {})
+    branding = design.get("branding", {})
+    severity_config = design.get("severity", {})
+
+    # Extract font sizes
+    font_body = fonts.get("sizes", {}).get("body", "11px")
+    font_h1 = fonts.get("sizes", {}).get("h1", "36px")
+    font_h2 = fonts.get("sizes", {}).get("h2", "20px")
+    font_h3 = fonts.get("sizes", {}).get("h3", "14px")
+    font_h4 = fonts.get("sizes", {}).get("h4", "12px")
+    font_table_header = fonts.get("sizes", {}).get("table_header", "10px")
+    font_table_cell = fonts.get("sizes", {}).get("table_cell", "10.5px")
+    font_small = fonts.get("sizes", {}).get("small", "9px")
+    font_label = fonts.get("sizes", {}).get("label", "10px")
+    font_family = fonts.get("family", "'Helvetica Neue', Helvetica, Arial, sans-serif")
+    font_mono = fonts.get("mono", "Courier New, monospace")
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,26 +201,26 @@ def render_html(data: dict, title: str) -> str:
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
   body {{
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 11px;
-    color: #2c3e50;
+    font-family: {font_family};
+    font-size: {font_body};
+    color: {colors.get('text_dark', '#2c3e50')};
     line-height: 1.5;
   }}
 
   /* Cover */
   .cover {{
     height: 100vh;
-    background: #1a1a2e;
-    color: white;
+    background: {colors.get('cover_bg', '#1a1a2e')};
+    color: {colors.get('cover_text', '#ffffff')};
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 60px;
+    padding: {spacing.get('cover_padding', '60px')};
     page-break-after: always;
   }}
 
   .cover h1 {{
-    font-size: 36px;
+    font-size: {font_h1};
     font-weight: 700;
     letter-spacing: -0.5px;
     margin-bottom: 12px;
@@ -181,29 +228,29 @@ def render_html(data: dict, title: str) -> str:
 
   .cover .subtitle {{
     font-size: 16px;
-    color: #a0aec0;
+    color: {colors.get('text_light', '#a0aec0')};
     margin-bottom: 48px;
   }}
 
   .cover .meta-grid {{
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: {spacing.get('meta_grid_gap', '24px')};
     max-width: 500px;
   }}
 
   .cover .meta-item label {{
     display: block;
-    font-size: 10px;
+    font-size: {font_label};
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #718096;
+    color: {colors.get('text_muted', '#718096')};
     margin-bottom: 4px;
   }}
 
   .cover .meta-item span {{
     font-size: 14px;
-    color: #e2e8f0;
+    color: {colors.get('bg_lighter', '#e2e8f0')};
   }}
 
   .cover .paw {{
@@ -213,43 +260,43 @@ def render_html(data: dict, title: str) -> str:
 
   /* Page layout */
   .page {{
-    padding: 40px 48px;
+    padding: {spacing.get('page_padding', '40px 48px')};
     max-width: 100%;
   }}
 
   h2 {{
-    font-size: 20px;
+    font-size: {font_h2};
     font-weight: 700;
-    color: #1a1a2e;
-    border-bottom: 2px solid #1a1a2e;
+    color: {colors.get('primary', '#1a1a2e')};
+    border-bottom: 2px solid {colors.get('primary', '#1a1a2e')};
     padding-bottom: 8px;
-    margin: 32px 0 16px;
+    margin: {spacing.get('section_margin_top', '32px')} 0 {spacing.get('section_margin_bottom', '16px')};
   }}
 
   h3 {{
-    font-size: 14px;
+    font-size: {font_h3};
     font-weight: 600;
-    margin: 24px 0 10px;
-    color: #2d3748;
+    margin: {spacing.get('subsection_margin_top', '24px')} 0 10px;
+    color: {colors.get('text_dark', '#2d3748')};
   }}
 
   h4 {{
-    font-size: 12px;
+    font-size: {font_h4};
     font-weight: 600;
     margin: 16px 0 6px;
-    color: #4a5568;
-    font-family: monospace;
+    color: {colors.get('text_muted', '#4a5568')};
+    font-family: {font_mono};
   }}
 
   /* Summary strip */
   .summary-strip {{
     display: flex;
-    gap: 24px;
-    background: #f7f8fa;
-    border: 1px solid #e2e8f0;
+    gap: {spacing.get('summary_gap', '24px')};
+    background: {colors.get('bg_light', '#f7f8fa')};
+    border: 1px solid {colors.get('border', '#e2e8f0')};
     border-radius: 6px;
-    padding: 20px 24px;
-    margin-bottom: 32px;
+    padding: {spacing.get('summary_padding', '20px 24px')};
+    margin-bottom: {spacing.get('section_margin_top', '32px')};
   }}
 
   .summary-item {{
@@ -266,16 +313,16 @@ def render_html(data: dict, title: str) -> str:
   }}
 
   .summary-label {{
-    font-size: 10px;
+    font-size: {font_label};
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #718096;
+    color: {colors.get('text_muted', '#718096')};
     margin-top: 4px;
   }}
 
   .summary-divider {{
     width: 1px;
-    background: #e2e8f0;
+    background: {colors.get('border', '#e2e8f0')};
     margin: 0 8px;
   }}
 
@@ -291,44 +338,44 @@ def render_html(data: dict, title: str) -> str:
   table {{
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 10.5px;
+    margin-bottom: {spacing.get('table_margin_bottom', '16px')};
+    font-size: {font_table_cell};
   }}
 
   th {{
-    background: #1a1a2e;
+    background: {colors.get('primary', '#1a1a2e')};
     color: white;
     text-align: left;
-    padding: 7px 10px;
+    padding: {spacing.get('table_header_padding', '7px 10px')};
     font-weight: 600;
-    font-size: 10px;
+    font-size: {font_table_header};
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }}
 
   td {{
-    padding: 6px 10px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: {spacing.get('table_padding', '6px 10px')};
+    border-bottom: 1px solid {colors.get('border', '#e2e8f0')};
     vertical-align: top;
   }}
 
-  tr:nth-child(even) td {{ background: #f7f8fa; }}
+  tr:nth-child(even) td {{ background: {colors.get('bg_light', '#f7f8fa')}; }}
 
   pre {{
-    font-size: 9px;
+    font-size: {font_small};
     white-space: pre-wrap;
     word-break: break-word;
     max-width: 400px;
-    color: #4a5568;
+    color: {colors.get('text_muted', '#4a5568')};
   }}
 
   /* Footer */
   .footer {{
     margin-top: 48px;
     padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
-    font-size: 9px;
-    color: #a0aec0;
+    border-top: 1px solid {colors.get('border', '#e2e8f0')};
+    font-size: {font_small};
+    color: {colors.get('text_light', '#a0aec0')};
     text-align: center;
   }}
 </style>
@@ -337,7 +384,7 @@ def render_html(data: dict, title: str) -> str:
 
 <!-- Cover Page -->
 <div class="cover">
-  <div class="paw">🐾</div>
+  <div class="paw">{branding.get('logo_emoji', '🐾')}</div>
   <h1>{title}</h1>
   <p class="subtitle">Network Security Audit Report</p>
   <div class="meta-grid">
@@ -355,7 +402,7 @@ def render_html(data: dict, title: str) -> str:
     </div>
     <div class="meta-item">
       <label>Tool</label>
-      <span>claude-snoop</span>
+      <span>{branding.get('tool_name', 'claude-snoop')}</span>
     </div>
   </div>
 </div>
@@ -366,7 +413,7 @@ def render_html(data: dict, title: str) -> str:
   <h2>Summary</h2>
   <div class="summary-strip">
     <div class="host-count">
-      <span class="summary-count" style="color:#1a1a2e">{host_count}</span>
+      <span class="summary-count" style="color:{colors.get('primary', '#1a1a2e')}">{host_count}</span>
       <span class="summary-label">Hosts Found</span>
     </div>
   </div>
@@ -378,10 +425,10 @@ def render_html(data: dict, title: str) -> str:
   {render_ports(ports_results)}
 
   <h2>Vulnerabilities &amp; Updates</h2>
-  {render_vulns(vulns_results)}
+  {render_vulns(vulns_results, design)}
 
   <div class="footer">
-    Generated by claude-snoop &nbsp;·&nbsp; {generated} &nbsp;·&nbsp; github.com/sid-engel/claude-snoop
+    Generated by {branding.get('tool_name', 'claude-snoop')} &nbsp;·&nbsp; {generated} &nbsp;·&nbsp; {branding.get('github_url', 'github.com/sid-engel/claude-snoop')}
   </div>
 
 </div>
@@ -398,7 +445,8 @@ def main():
     args = parser.parse_args()
 
     data = load_findings(args.input)
-    html = render_html(data, args.title)
+    design = load_design()
+    html = render_html(data, args.title, design)
 
     if args.html_only:
         html_path = args.output.replace(".pdf", ".html")

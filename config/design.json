@@ -1,0 +1,93 @@
+{
+  "branding": {
+    "logo_emoji": "✨",
+    "tool_name": "NetAudit Pro",
+    "github_url": "github.com/sid-engel/claude-snoop"
+  },
+  "colors": {
+    "primary": "#ff6b35",
+    "secondary": "#ffa500",
+    "accent": "#ffb84d",
+    "text_dark": "#2d3436",
+    "text_light": "#636e72",
+    "text_muted": "#b2bec3",
+    "bg_light": "#fffacd",
+    "bg_lighter": "#ffe4b5",
+    "border": "#ffd39f",
+    "cover_bg": "#fff8dc",
+    "cover_text": "#1a1a2e"
+  },
+  "severity": {
+    "high": {
+      "color": "#e74c3c",
+      "label": "CRITICAL"
+    },
+    "medium": {
+      "color": "#f39c12",
+      "label": "WARNING"
+    },
+    "low": {
+      "color": "#3498db",
+      "label": "NOTICE"
+    },
+    "informational": {
+      "color": "#9b59b6",
+      "label": "INFO"
+    },
+    "update_available": {
+      "color": "#27ae60",
+      "label": "AVAILABLE"
+    }
+  },
+  "fonts": {
+    "family": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    "mono": "Courier New, monospace",
+    "sizes": {
+      "body": "11px",
+      "h1": "36px",
+      "h2": "20px",
+      "h3": "14px",
+      "h4": "12px",
+      "table_header": "10px",
+      "table_cell": "10.5px",
+      "small": "9px",
+      "label": "10px"
+    },
+    "weights": {
+      "normal": "400",
+      "semibold": "600",
+      "bold": "700"
+    }
+  },
+  "spacing": {
+    "cover_padding": "60px",
+    "page_padding": "40px 48px",
+    "section_margin_top": "32px",
+    "section_margin_bottom": "16px",
+    "subsection_margin_top": "24px",
+    "table_margin_bottom": "16px",
+    "table_padding": "6px 10px",
+    "table_header_padding": "7px 10px",
+    "summary_padding": "20px 24px",
+    "summary_gap": "24px",
+    "meta_grid_gap": "24px"
+  },
+  "layout": {
+    "cover_height": "100vh",
+    "cover_display": "flex",
+    "cover_direction": "column",
+    "cover_justify": "center",
+    "cover_page_break": "always",
+    "max_width": "100%",
+    "table_width": "100%"
+  },
+  "borders": {
+    "radius": "6px",
+    "table_collapse": "collapse",
+    "section_border_width": "2px"
+  },
+  "opacity": {
+    "badge_padding": "2px 6px",
+    "badge_radius": "3px"
+  }
+}
