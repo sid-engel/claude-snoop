@@ -19,10 +19,18 @@ Output → `output/report.pdf`
 
 ## How It Works
 
-1. **Discovery** — nmap host discovery scan finds live IPs on subnet
-2. **Port Scan** — nmap service enumeration on each host (parallel, configurable workers)
-3. **Vulnerability Analysis** — Claude analyzes detected service versions for known CVEs, critical vulns, available updates
-4. **Report Generation** — Combines findings into readable PDF with:
+Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
+
+1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet
+2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers)
+3. **Combine Findings** — Merges discovery + port scan results into `output/findings.json`
+4. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
+5. **Inject Vulns** — Adds vulnerability findings to `findings.json`
+6. **Read Design** — Reads `config/design.md` for report styling (colors, fonts, spacing, severity badges)
+7. **Generate HTML** — Creates HTML report with inline CSS from findings.json + design.md
+8. **Render PDF** — Calls weasyprint to convert HTML → PDF with:
+   - Cover page (title, target, timestamp)
+   - Executive summary (host count, port count, vuln count)
    - Host discovery table (IP, hostname)
    - Open ports & services per host (port, protocol, product, version)
    - Vulnerabilities & updates per service (CVE, severity, details)
@@ -74,21 +82,29 @@ pip install -r requirements.txt
 
 ## Architecture
 
-**scripts/scan.py**
-- nmap wrapper, parses XML output to JSON
+**Claude-Centric Orchestration**
+- `claude-snoop.sh` (wrapper) invokes Claude Code with CLAUDE.md instructions
+- Claude controls entire pipeline: scanning, analysis, report generation
+
+**Components**
+
+`scripts/scan.py` — nmap wrapper
+- Parses nmap XML output to JSON
 - Modes: `discovery` (host sweep), `ports` (service enumeration)
 
-**scripts/orchestrate.py**
-- Runs discovery → parallel port scans → combines findings into JSON
-- Manages ThreadPoolExecutor for parallel scanning (configurable workers)
-- Writes findings to `output/findings.json`
+`scripts/orchestrate.py` — scan coordinator
+- Runs discovery scan on target
+- Runs parallel port scans (configurable workers, default 4)
+- Combines results into `output/findings.json`
 
-**config/design.md**
-- Report design template (colors, fonts, spacing, severity badges, layout)
-- Claude reads this to render the PDF report
+`config/design.md` — report design template
+- YAML config: colors, fonts, spacing, severity badges
+- Markdown sections: layout directives for cover, summary, tables, footer
+- Claude reads this to style the generated HTML report
 
-**CLAUDE.md**
-- Instructions for Claude orchestrator: discovery, port scans, vulnerability analysis, HTML generation, PDF export via weasyprint
+`CLAUDE.md` — orchestration instructions
+- Instructions for Claude: how to run scans, analyze vulns, generate HTML, call weasyprint
+- Claude is responsible for all orchestration and report generation
 
 ---
 
