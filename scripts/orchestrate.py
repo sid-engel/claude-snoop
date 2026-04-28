@@ -99,6 +99,12 @@ def main():
     output_dir = Path(args.output).parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Log configuration
+    print(f"[*] Configuration:")
+    print(f"    Target: {args.target}")
+    print(f"    Workers: {args.workers}")
+    print(f"    Output: {args.output}")
+
     # Step 1: Discovery
     discovery_output = run_discovery(args.target)
     discovery_results = discovery_output.get("results", [])

@@ -53,12 +53,14 @@ pip install -r requirements.txt
 
 **Options:**
 - `--target` (required) — IP, range, or subnet (e.g., `192.168.1.0/24`, `10.0.0.1`)
-- `--title` (optional) — Report title (default: `"Audit — <TARGET>"`)
+- `--title` (optional) — Report title (default: `"Network Audit — <TARGET>"`)
+- `--workers` (optional) — Parallel port scan workers (default: `4`)
 
-### Direct Orchestration
-
+**Examples:**
 ```bash
-python3 scripts/orchestrate.py --target 192.168.1.0/24
+./claude-snoop.sh --target 192.168.1.0/24
+./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit"
+./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit" --workers 8
 ```
 
 ---
