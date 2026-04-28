@@ -148,32 +148,13 @@ def main():
     findings_path.write_text(json.dumps(combined, indent=2))
     print(f"[+] Findings written to {findings_path}")
 
-    # Step 5: Generate report
-    print(f"[*] Generating report...")
-    try:
-        subprocess.run(
-            [
-                "python3",
-                "scripts/report.py",
-                "--input",
-                str(findings_path),
-                "--output",
-                args.output,
-                "--title",
-                title,
-            ],
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        print(f"[error] Report generation failed: {e}", file=sys.stderr)
-        sys.exit(1)
-
     # Report results
     print()
-    print(f"[✓] Audit complete")
+    print(f"[✓] Discovery & port scans complete")
     print(f"    Hosts discovered: {len(discovery_results)}")
     print(f"    Open ports found: {total_ports}")
-    print(f"    Report: {args.output}")
+    print(f"    Findings: {findings_path}")
+    print(f"[*] Claude will now analyze vulnerabilities and generate the PDF report...")
 
 
 if __name__ == "__main__":

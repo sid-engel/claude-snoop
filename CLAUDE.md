@@ -14,9 +14,10 @@ The orchestrator will:
 1. Run discovery scan to find live hosts
 2. Run parallel port scans (4 workers by default, configurable with `--workers`)
 3. Combine findings into `output/findings.json`
-4. **Analyze service versions for vulnerabilities and available updates**
-5. Generate PDF report
-6. Print summary (host count, port count, report path)
+
+You (Claude) will then:
+4. Analyze service versions for vulnerabilities and available updates
+5. Generate the PDF report from design.md
 
 If no hosts are discovered, the orchestrator stops and tells you.
 
@@ -44,11 +45,30 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
    }
    ```
 4. Read `output/findings.json`, merge vuln analysis into `vulns.results`, write back to `output/findings.json`
-5. Call report.py with exact flags:
+
+## Report Generation
+
+5. Read `config/design.md` to understand the report design directives (colors, fonts, spacing, layout, severity badges)
+6. Generate HTML from findings.json using design.md styling:
+   - Build HTML with inline CSS per design directives
+   - Render cover page, executive summary, discovery table, ports table, vulns table, footer
+   - Use severity badges with colors/labels from design.md
+   - Follow spacing, fonts, colors exactly as specified
+   - **Handle findings properly:** Each finding in vulns.results[].findings[] is either:
+     - CVE finding: has 'cve', 'severity', 'description' keys
+     - Update finding: has 'update_available', 'release_date' keys
+     - Check `if 'cve' in finding` vs `elif 'update_available' in finding` before accessing keys
+     - Don't assume all findings have all keys
+7. Call weasyprint via subprocess to convert HTML to PDF:
    ```bash
-   python3 scripts/report.py --input output/findings.json --output <PDF_PATH> --title "<TITLE>"
+   echo "<html>...</html>" | weasyprint - <PDF_PATH>
+   ```
+   Or write HTML to temp file, then:
+   ```bash
+   weasyprint <HTML_FILE> <PDF_PATH>
    ```
    Use same output path and title from orchestrate.py run.
+   - **CSS note:** Avoid `min-height: 100vh` (weasyprint PDF limitation). Use fixed heights, padding, or page-break rules instead.
 
 ## Options
 

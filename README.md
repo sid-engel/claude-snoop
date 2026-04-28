@@ -79,16 +79,16 @@ pip install -r requirements.txt
 - Modes: `discovery` (host sweep), `ports` (service enumeration)
 
 **scripts/orchestrate.py**
-- Coordinates discovery → parallel port scans → vulnerability analysis → report
+- Runs discovery → parallel port scans → combines findings into JSON
 - Manages ThreadPoolExecutor for parallel scanning (configurable workers)
-- Merges findings into combined JSON
+- Writes findings to `output/findings.json`
 
-**scripts/report.py**
-- Loads findings JSON, renders HTML template with CSS
-- Exports to PDF via weasyprint
+**config/design.md**
+- Report design template (colors, fonts, spacing, severity badges, layout)
+- Claude reads this to render the PDF report
 
 **CLAUDE.md**
-- Instructions for Claude instance: how to run orchestration, analyze vulns, call report generator
+- Instructions for Claude orchestrator: discovery, port scans, vulnerability analysis, HTML generation, PDF export via weasyprint
 
 ---
 
