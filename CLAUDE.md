@@ -70,7 +70,6 @@ Tell the user:
 
 ## Rules
 
-- Always run as root/sudo if possible — some nmap scans require elevated privileges
 - If a scan step fails, note it in the findings and continue — don't stop the whole run
 - Do not modify scan output — pass it through as-is to the report generator
 - Output directory is `output/` relative to the repo root — create it if it doesn't exist

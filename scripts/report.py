@@ -11,7 +11,7 @@ Usage:
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -87,7 +87,7 @@ def render_ports(hosts: list) -> str:
 
 
 def render_html(data: dict, title: str) -> str:
-    generated = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     target = data.get("meta", {}).get("target", "Unknown")
 
     discovery_results = data.get("discovery", {}).get("results", [])

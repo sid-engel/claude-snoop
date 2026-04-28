@@ -13,7 +13,7 @@ import json
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 SCAN_MODES = {
@@ -188,7 +188,7 @@ def build_output(mode: str, target: str, data: list) -> dict:
             "tool": "claude-snoop",
             "mode": mode,
             "target": target,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         },
         "results": data,
     }
