@@ -4,62 +4,27 @@ You are the orchestrator for claude-snoop, a network audit tool. When the user p
 
 ## Your Job
 
-1. Run each scan agent in order using `scripts/scan.py`
-2. Collect and combine the JSON output from each agent
-3. Write the combined findings to `output/findings.json`
-4. Run `scripts/report.py` to generate the PDF
-5. Tell the user where the report is
-
-## Scan Order
-
-Always run in this order — each step builds on the last:
-
-### Step 1 — Discovery
-Find live hosts on the subnet.
+Run the orchestration script with a target. It handles everything:
 
 ```bash
-python3 scripts/scan.py --target <TARGET> --mode discovery
+python3 scripts/orchestrate.py --target <TARGET> [--output <PDF_PATH>] [--title "<TITLE>"] [--workers N]
 ```
 
-Parse the JSON output. If no hosts are found, stop and tell the user.
+The orchestrator will:
+1. Run discovery scan to find live hosts
+2. Run parallel port scans (4 workers by default, configurable with `--workers`)
+3. Combine findings into `output/findings.json`
+4. Generate PDF report
+5. Print summary (host count, port count, report path)
 
-### Step 2 — Ports & Services
-Enumerate open ports on discovered hosts. **Run one host at a time** to ensure nmap processes each properly.
+If no hosts are discovered, the orchestrator stops and tells you.
 
-For each discovered host IP from Step 1:
+## Options
 
-```bash
-python3 scripts/scan.py --target <HOST_IP> --mode ports
-```
-
-Print progress before each scan: `Scanning <HOST_IP> for open ports...`
-Collect JSON output from each scan into an array.
-
-## Combining Findings
-
-After all scans complete, write a single JSON file structured like this:
-
-```json
-{
-  "meta": {
-    "target": "<TARGET>",
-    "timestamp": "<ISO8601>",
-    "tool": "claude-snoop"
-  },
-  "discovery": { ...output from step 1... },
-  "ports":     { ...output from step 2... }
-}
-```
-
-Write this to `output/findings.json`.
-
-## Generating the Report
-
-```bash
-python3 scripts/report.py --input output/findings.json --output output/report.pdf --title "<TITLE>"
-```
-
-Use the target as the title if none is provided (e.g. "Audit — 192.168.1.0/24").
+- `--target` (required): Target IP, range, or subnet (e.g., `192.168.1.0/24`)
+- `--output` (optional): Output PDF path (default: `output/report.pdf`)
+- `--title` (optional): Report title (default: `"Audit — <TARGET>"`)
+- `--workers` (optional): Number of parallel port scan workers (default: 4, use 1 for sequential)
 
 ## Output
 
