@@ -54,6 +54,7 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
    - Render cover page, executive summary, discovery table, ports table, vulns table, footer
    - Use severity badges with colors/labels from design.md
    - Follow spacing, fonts, colors exactly as specified
+   - Follow all sorting directives from design.md
    - **Handle findings properly:** Each finding in vulns.results[].findings[] is either:
      - CVE finding: has 'cve', 'severity', 'description' keys
      - Update finding: has 'update_available', 'release_date' keys
