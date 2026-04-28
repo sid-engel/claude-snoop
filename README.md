@@ -23,7 +23,7 @@ Output → `output/report.pdf`
 2. **Port Scan** — nmap service enumeration on each host (parallel, configurable workers)
 3. **Vulnerability Analysis** — Claude analyzes detected service versions for known CVEs, critical vulns, available updates
 4. **Report Generation** — Combines findings into readable PDF with:
-   - Host discovery table (IP, hostname, MAC, vendor)
+   - Host discovery table (IP, hostname)
    - Open ports & services per host (port, protocol, product, version)
    - Vulnerabilities & updates per service (CVE, severity, details)
 
@@ -98,6 +98,12 @@ After port scans complete, Claude analyzes detected service versions (e.g., `Ope
 - Critical vulnerabilities needing immediate attention
 
 Analysis uses Claude's training knowledge — no external API calls.
+
+---
+
+## Known Limitations
+
+- **MAC Addresses** — Not captured in discovery results. Nmap's host discovery scan does not return MAC address data in most environments (Docker, VMs, certain network configs). This is a network layer limitation, not a tool limitation.
 
 ---
 

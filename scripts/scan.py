@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 SCAN_MODES = {
     "discovery": {
         "description": "Host discovery sweep — find live hosts on the subnet",
-        "flags": ["-sn", "-T4", "--open"],
+        "flags": ["-sn", "--send-eth", "-T4"],
     },
     "ports": {
         "description": "Port and service enumeration on live hosts",

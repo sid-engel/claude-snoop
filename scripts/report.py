@@ -47,8 +47,6 @@ def render_discovery(hosts: list) -> str:
         <tr>
             <td>{h.get('ip', '—')}</td>
             <td>{h.get('hostname') or '—'}</td>
-            <td>{h.get('mac') or '—'}</td>
-            <td>{h.get('vendor') or '—'}</td>
         </tr>"""
 
     return f"""
@@ -57,8 +55,6 @@ def render_discovery(hosts: list) -> str:
             <tr>
                 <th>IP Address</th>
                 <th>Hostname</th>
-                <th>MAC Address</th>
-                <th>Vendor</th>
             </tr>
         </thead>
         <tbody>{rows}</tbody>
