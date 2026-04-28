@@ -23,16 +23,18 @@ Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 
 1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet
 2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers)
-3. **Combine Findings** — Merges discovery + port scan results into `output/findings.json`
-4. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
-5. **Inject Vulns** — Adds vulnerability findings to `findings.json`
-6. **Read Design** — Reads `config/design.md` for report styling (colors, fonts, spacing, severity badges)
-7. **Generate HTML** — Creates HTML report with inline CSS(HTML + CSS Claude generated) from findings.json data + design.md directive.
-8. **Render PDF** — Calls weasyprint to convert HTML → PDF with:
+3. **External Scan** (optional) — Detects public IP and scans major ports externally (enabled by default, can be disabled with `--external false`)
+4. **Combine Findings** — Merges discovery + port scan + external scan results into `output/findings.json`
+5. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
+6. **Inject Vulns** — Adds vulnerability findings to `findings.json`
+7. **Read Design** — Reads `config/design.md` for report styling (colors, fonts, spacing, severity badges)
+8. **Generate HTML** — Creates HTML report with inline CSS(HTML + CSS Claude generated) from findings.json data + design.md directive.
+9. **Render PDF** — Calls weasyprint to convert HTML → PDF with:
    - Cover page (title, target, timestamp)
-   - Executive summary (host count, port count, vuln count)
+   - Executive summary (host count, port count, external port count, vuln count)
    - Host discovery table (IP, hostname)
    - Open ports & services per host (port, protocol, product, version)
+   - External ports scan (if public ports found)
    - Vulnerabilities & updates per service (CVE, severity, details)
 
 ---
@@ -59,16 +61,20 @@ pip install -r requirements.txt
 ./claude-snoop.sh --target <TARGET> [OPTIONS]
 ```
 
-**Options:**
-- `--target` (required) — IP, range, or subnet (e.g., `192.168.1.0/24`, `10.0.0.1`)
-- `--title` (optional) — Report title (default: `"Network Audit — <TARGET>"`)
-- `--workers` (optional) — Parallel port scan workers (default: `4`)
+**Required:**
+- `--target <IP/subnet>` — Target IP, range, or subnet (e.g., `192.168.1.0/24`, `10.0.0.1`)
+
+**Optional:**
+- `--title <title>` — Report title (default: `"Network Audit — <TARGET>"`)
+- `--workers <N>` — Parallel port scan workers (default: `4`)
+- `--external true|false` — Scan public IP for open ports (default: `true`)
 
 **Examples:**
 ```bash
 ./claude-snoop.sh --target 192.168.1.0/24
 ./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit"
 ./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit" --workers 8
+./claude-snoop.sh --target 192.168.1.0/24 --external false
 ```
 
 ---

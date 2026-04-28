@@ -56,8 +56,28 @@ def run_port_scan(host_ip: str) -> tuple[str, dict]:
         return (host_ip, {"meta": {}, "results": []})
 
 
-def combine_findings(target: str, discovery_output: dict, port_outputs: list) -> dict:
-    """Combine discovery and port scan outputs into findings structure."""
+def run_external_scan() -> dict:
+    """Run external port scan, return parsed results."""
+    print("[*] External scan (public IP + major ports)...")
+    try:
+        result = subprocess.run(
+            ["python3", "scripts/external_scan.py"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300,
+        )
+        return json.loads(result.stdout)
+    except subprocess.TimeoutExpired:
+        print(f"[warning] External scan timed out", file=sys.stderr)
+        return {"error": "timeout"}
+    except subprocess.CalledProcessError as e:
+        print(f"[warning] External scan failed: {e.stderr}", file=sys.stderr)
+        return {"error": str(e)}
+
+
+def combine_findings(target: str, discovery_output: dict, port_outputs: list, external_output: dict = None) -> dict:
+    """Combine discovery, port scans, and external scan into findings structure."""
 
     # Extract discovery results
     discovery_results = discovery_output.get("results", [])
@@ -82,6 +102,13 @@ def combine_findings(target: str, discovery_output: dict, port_outputs: list) ->
         },
     }
 
+    # Add external scan data if available
+    if external_output and "error" not in external_output:
+        combined["external"] = {
+            "public_ip": external_output.get("public_ip"),
+            "open_ports": external_output.get("open_ports", []),
+        }
+
     return combined
 
 
@@ -91,6 +118,7 @@ def main():
     parser.add_argument("--output", default="output/report.pdf", help="Output PDF path")
     parser.add_argument("--title", help="Report title (defaults to target)")
     parser.add_argument("--workers", type=int, default=4, help="Parallel port scan workers (default: 4)")
+    parser.add_argument("--external", type=lambda x: x.lower() in ('true', '1', 'yes'), default=True, help="Scan public IP for open ports (default: true)")
     args = parser.parse_args()
 
     title = args.title or f"Audit — {args.target}"
@@ -103,6 +131,7 @@ def main():
     print(f"[*] Configuration:")
     print(f"    Target: {args.target}")
     print(f"    Workers: {args.workers}")
+    print(f"    External scan: {'enabled' if args.external else 'disabled'}")
     print(f"    Output: {args.output}")
 
     # Step 1: Discovery
@@ -134,8 +163,13 @@ def main():
             port_outputs.append(output)
             print(f"    [+] {ip} complete")
 
-    # Step 3: Combine findings
-    combined = combine_findings(args.target, discovery_output, port_outputs)
+    # Step 3: Optional external scan
+    external_output = None
+    if args.external:
+        external_output = run_external_scan()
+
+    # Step 4: Combine findings
+    combined = combine_findings(args.target, discovery_output, port_outputs, external_output)
 
     # Count open ports
     total_ports = sum(
@@ -143,7 +177,11 @@ def main():
         for host in combined["ports"]["results"]
     )
 
-    # Step 4: Write findings
+    external_ports = 0
+    if "external" in combined:
+        external_ports = len(combined["external"].get("open_ports", []))
+
+    # Step 5: Write findings
     findings_path = output_dir / "findings.json"
     findings_path.write_text(json.dumps(combined, indent=2))
     print(f"[+] Findings written to {findings_path}")
@@ -153,6 +191,8 @@ def main():
     print(f"[✓] Discovery & port scans complete")
     print(f"    Hosts discovered: {len(discovery_results)}")
     print(f"    Open ports found: {total_ports}")
+    if external_ports > 0:
+        print(f"    External ports open: {external_ports}")
     print(f"    Findings: {findings_path}")
     print(f"[*] Claude will now analyze vulnerabilities and generate the PDF report...")
 

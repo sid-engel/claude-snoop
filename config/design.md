@@ -79,6 +79,7 @@ branding:
 Card-style display:
 - Hosts Discovered (count from discovery.results)
 - Open Ports Found (sum of open_ports across all hosts)
+- External Ports Open (count from external.open_ports, if present)
 - Vulnerabilities Identified (count from vulns.results)
 - Critical Issues (count where severity: "high")
 
@@ -99,6 +100,18 @@ Use accent color for cards.
 - Sort by IP, then port ascending
 - One row per open port
 - Striped rows
+
+## External Ports Scan
+**Columns:** Port | Protocol | Service | Product | Version
+**(Shown when external scan is enabled)**
+
+- Display public IP: "Public IP: X.X.X.X" (from external.public_ip)
+- If external.open_ports is empty: show "No open ports detected on public IP"
+- If external.open_ports has results:
+  - All open ports from external.open_ports
+  - Sort by port number ascending
+  - One row per external port
+  - Striped rows (same styling as Port & Service Inventory)
 
 ## Vulnerabilities & Findings
 **Columns:** IP | Port | Product | Version | CVE/Finding | Severity | Description

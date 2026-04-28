@@ -7,17 +7,18 @@ You are the orchestrator for claude-snoop, a network audit tool. When the user p
 Run the orchestration script with a target. It handles everything:
 
 ```bash
-python3 scripts/orchestrate.py --target <TARGET> [--output <PDF_PATH>] [--title "<TITLE>"] [--workers N]
+python3 scripts/orchestrate.py --target <TARGET> [--output <PDF_PATH>] [--title "<TITLE>"] [--workers N] [--external true/false]
 ```
 
 The orchestrator will:
 1. Run discovery scan to find live hosts
 2. Run parallel port scans (4 workers by default, configurable with `--workers`)
-3. Combine findings into `output/findings.json`
+3. Optionally run external scan to detect public IP and scan major ports (enabled by default)
+4. Combine findings into `output/findings.json`
 
 You (Claude) will then:
-4. Analyze service versions for vulnerabilities and available updates
-5. Generate the PDF report from design.md
+5. Analyze service versions for vulnerabilities and available updates
+6. Generate the PDF report from design.md
 
 If no hosts are discovered, the orchestrator stops and tells you.
 
@@ -50,11 +51,20 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
 
 5. Read `config/design.md` to understand the report design directives (colors, fonts, spacing, layout, severity badges)
 6. Generate HTML from findings.json using design.md styling:
+   - Parse design.md YAML frontmatter into dict. Use `.get()` with defaults when accessing nested keys — don't assume all keys exist
    - Build HTML with inline CSS per design directives
-   - Render cover page, executive summary, discovery table, ports table, vulns table, footer
+   - Render cover page, executive summary, discovery table, ports table, external ports table (if present), vulns table, footer
    - Use severity badges with colors/labels from design.md
    - Follow spacing, fonts, colors exactly as specified
    - Follow all sorting directives from design.md
+   - **CSS safety:** Never use `height: 100vh`, `min-height: 100vh`, or `max-height: 100vh` (weasyprint limitation). Use fixed pixel heights, padding, flexbox centering, or page-break rules instead
+   - **External scan data:** If `findings.external` is present (i.e., external scan was run):
+     - Add "External Ports Scan" section showing public IP
+     - If no open ports found: display "No open ports detected on public IP"
+     - If open ports found: display table with port, protocol, service, product, version (sorted by port number)
+     - Include external port count in executive summary card (only if ports > 0)
+     - Use same table styling as internal ports table
+   - **Cover page CSS:** Use flexbox + padding or fixed height for vertical centering, not viewport height. Example: `display: flex; flex-direction: column; justify-content: center; padding: 80px 40px;` — avoid `height/min-height: 100vh`
    - **Handle findings properly:** Each finding in vulns.results[].findings[] is either:
      - CVE finding: has 'cve', 'severity', 'description' keys
      - Update finding: has 'update_available', 'release_date' keys
@@ -69,7 +79,6 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
    weasyprint <HTML_FILE> <PDF_PATH>
    ```
    Use same output path and title from orchestrate.py run.
-   - **CSS note:** Avoid `min-height: 100vh` (weasyprint PDF limitation). Use fixed heights, padding, or page-break rules instead.
 
 ## Options
 
@@ -77,6 +86,7 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
 - `--output` (optional): Output PDF path (default: `output/report.pdf`)
 - `--title` (optional): Report title (default: `"Audit — <TARGET>"`)
 - `--workers` (optional): Number of parallel port scan workers (default: 4, use 1 for sequential)
+- `--external` (optional): Scan public IP for open ports (default: true, use `false` to disable)
 
 ## Output
 
