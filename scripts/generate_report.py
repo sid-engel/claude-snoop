@@ -33,12 +33,31 @@ def parse_design_md(design_path):
         if not line.strip() or line.strip().startswith('#'):
             continue
 
+        if ':' not in line:
+            continue
+
         # Detect indentation level
         indent = len(line) - len(line.lstrip())
+        key, val = line.split(':', 1)
+        key = key.strip()
+        val = val.strip()
+
+        # Handle quoted values properly (don't strip comments inside quotes)
+        if val.startswith('"'):
+            end_quote = val.find('"', 1)
+            if end_quote != -1:
+                val = val[1:end_quote]
+        elif val.startswith("'"):
+            end_quote = val.find("'", 1)
+            if end_quote != -1:
+                val = val[1:end_quote]
+        else:
+            # Unquoted value, strip trailing comments
+            if '#' in val:
+                val = val.split('#')[0].strip()
 
         # Top-level section (no indent)
-        if indent == 0 and ':' in line:
-            key = line.split(':')[0].strip()
+        if indent == 0:
             if key in ['colors', 'fonts', 'spacing', 'branding', 'severity']:
                 current_section = key
                 current_subsection = None
@@ -46,36 +65,33 @@ def parse_design_md(design_path):
 
         # First-level nested (2 spaces)
         if indent == 2:
-            if ':' in line:
-                key, val = line.split(':', 1)
-                key = key.strip()
-                val = val.strip().strip('\'"')
-
-                if current_section == 'colors':
-                    config['colors'][key] = val
-                elif current_section == 'branding':
-                    config['branding'][key] = val
-                elif current_section == 'spacing':
-                    config['spacing'][key] = val
-                elif current_section == 'fonts':
-                    if key in ['sizes', 'weights']:
-                        current_subsection = key
-                    else:
-                        config['fonts'][key] = val
+            if current_section == 'colors':
+                config['colors'][key] = val
+            elif current_section == 'branding':
+                config['branding'][key] = val
+            elif current_section == 'spacing':
+                config['spacing'][key] = val
+            elif current_section == 'fonts':
+                if key in ['sizes', 'weights']:
+                    current_subsection = key
+                else:
+                    config['fonts'][key] = val
+            elif current_section == 'severity':
+                # Severity subsection (high, medium, low, etc.)
+                if key in ['high', 'medium', 'low', 'informational', 'update_available']:
+                    current_subsection = key
+                    config['severity'][key] = {}
             continue
 
         # Second-level nested (4 spaces)
         if indent == 4:
-            if ':' in line:
-                key, val = line.split(':', 1)
-                key = key.strip()
-                val = val.strip().strip('\'"')
-
-                if current_section == 'fonts':
-                    if current_subsection == 'sizes':
-                        config['fonts']['sizes'][key] = val
-                    elif current_subsection == 'weights':
-                        config['fonts']['weights'][key] = val
+            if current_section == 'fonts':
+                if current_subsection == 'sizes':
+                    config['fonts']['sizes'][key] = val
+                elif current_subsection == 'weights':
+                    config['fonts']['weights'][key] = val
+            elif current_section == 'severity' and current_subsection:
+                config['severity'][current_subsection][key] = val
 
     return config
 
@@ -83,16 +99,24 @@ def get_color(config, key, default='#000000'):
     """Get color from config with fallback"""
     return config.get('colors', {}).get(key, default)
 
-def get_severity_color(severity):
-    """Get color for severity badge"""
-    colors = {
-        'high': ('#DC2626', '#FEE2E2', 'CRITICAL'),
-        'medium': ('#EA580C', '#FFEDD5', 'WARNING'),
-        'low': ('#2563EB', '#DBEAFE', 'NOTICE'),
-        'informational': ('#7C3AED', '#EDE9FE', 'INFO'),
-        'update_available': ('#16A34A', '#DCFCE7', 'UPDATE')
+def get_severity_config(config, severity):
+    """Get severity config with fallback defaults"""
+    defaults = {
+        'high': {'color': '#DC2626', 'bg': '#FEE2E2', 'label': 'CRITICAL'},
+        'medium': {'color': '#EA580C', 'bg': '#FFEDD5', 'label': 'WARNING'},
+        'low': {'color': '#2563EB', 'bg': '#DBEAFE', 'label': 'NOTICE'},
+        'informational': {'color': '#7C3AED', 'bg': '#EDE9FE', 'label': 'INFO'},
+        'update_available': {'color': '#16A34A', 'bg': '#DCFCE7', 'label': 'UPDATE'}
     }
-    return colors.get(severity, ('#999999', '#EEEEEE', 'UNKNOWN'))
+
+    severity_config = config.get('severity', {}).get(severity, {})
+    default = defaults.get(severity, defaults['informational'])
+
+    return {
+        'color': severity_config.get('color', default['color']),
+        'bg': severity_config.get('bg', default['bg']),
+        'label': severity_config.get('label', default['label'])
+    }
 
 def generate_html(findings, config, title):
     """Generate HTML report"""
@@ -127,6 +151,17 @@ def generate_html(findings, config, title):
     line_height = spacing.get('line_height', '1.6')
 
     logo = branding.get('logo', '🐾')
+
+    # Build severity badge CSS from config
+    badge_css = ""
+    for severity in ['high', 'medium', 'low', 'informational', 'update_available']:
+        sev_config = get_severity_config(config, severity)
+        badge_name = 'update' if severity == 'update_available' else severity
+        badge_css += f"""
+        .badge-{badge_name} {{
+            color: {sev_config['color']};
+            background: {sev_config['bg']};
+        }}"""
 
     # Extract data
     meta = findings.get('meta', {})
@@ -304,31 +339,6 @@ def generate_html(findings, config, title):
             white-space: nowrap;
         }}
 
-        .badge-high {{
-            color: #DC2626;
-            background: #FEE2E2;
-        }}
-
-        .badge-medium {{
-            color: #EA580C;
-            background: #FFEDD5;
-        }}
-
-        .badge-low {{
-            color: #2563EB;
-            background: #DBEAFE;
-        }}
-
-        .badge-informational {{
-            color: #7C3AED;
-            background: #EDE9FE;
-        }}
-
-        .badge-update {{
-            color: #16A34A;
-            background: #DCFCE7;
-        }}
-
         .no-findings {{
             color: {text_light};
             font-style: italic;
@@ -347,7 +357,7 @@ def generate_html(findings, config, title):
 
         .page-break {{
             page-break-after: always;
-        }}
+        }}{badge_css}
     </style>
 </head>
 <body>
@@ -532,18 +542,20 @@ def generate_html(findings, config, title):
             version = vuln.get('version', '—')
 
             for finding in vuln.get('findings', []):
-                if 'cve' in finding:
-                    cve = finding['cve']
+                if 'cve' in finding or 'issue' in finding:
+                    # Handle both CVE format and issue format
+                    identifier = finding.get('cve') or finding.get('issue', '')
                     severity = finding.get('severity', 'informational')
                     desc = finding.get('description', '')
+                    sev_config = get_severity_config(config, severity)
                     badge_class = f"badge-{severity}"
-                    severity_label = severity.upper()
+                    severity_label = sev_config['label']
                     html += f"""                <tr>
                     <td>{ip}</td>
                     <td>{port}</td>
                     <td>{product}</td>
                     <td>{version}</td>
-                    <td>{cve}</td>
+                    <td>{identifier}</td>
                     <td><span class="badge {badge_class}">{severity_label}</span></td>
                     <td>{desc}</td>
                 </tr>
@@ -551,13 +563,15 @@ def generate_html(findings, config, title):
                 elif 'update_available' in finding:
                     update = finding['update_available']
                     desc = f"Update available: {update}"
+                    sev_config = get_severity_config(config, 'update_available')
+                    update_label = sev_config['label']
                     html += f"""                <tr>
                     <td>{ip}</td>
                     <td>{port}</td>
                     <td>{product}</td>
                     <td>{version}</td>
                     <td>Update Available</td>
-                    <td><span class="badge badge-update">UPDATE</span></td>
+                    <td><span class="badge badge-update">{update_label}</span></td>
                     <td>{desc}</td>
                 </tr>
 """

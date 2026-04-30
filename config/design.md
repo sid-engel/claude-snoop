@@ -5,15 +5,15 @@ github: "https://github.com/anthropics/claude-snoop"
 
 # Color Palette
 colors:
-  primary: "#1E293B"        # Dark slate
-  secondary: "#64748B"      # Medium slate
-  accent: "#0EA5E9"         # Cyan
-  text_dark: "#0F172A"      # Almost black
-  text_light: "#94A3B8"     # Light gray
-  background: "#F8FAFC"     # Off-white
-  border: "#E2E8F0"         # Light border
-  cover_bg: "#0F172A"       # Dark cover
-  cover_text: "#FFFFFF"     # White text
+  primary: "#8B4513"        # Saddle brown
+  secondary: "#D2691E"      # Chocolate
+  accent: "#FF1493"         # Deep pink
+  text_dark: "#3E2723"      # Dark brown
+  text_light: "#D7CCC8"     # Warm beige
+  background: "#FFF8F0"     # Floral white
+  border: "#D4A574"         # Warm tan
+  cover_bg: "#4A1C1C"       # Deep burgundy
+  cover_text: "#FFF8F0"     # Floral white text
 
 # Typography
 fonts:
@@ -40,24 +40,24 @@ spacing:
 severity:
   high:
     label: "CRITICAL"
-    color: "#DC2626"
-    bg: "#FEE2E2"
+    color: "#C41E3A"
+    bg: "#FDD7E4"
   medium:
     label: "WARNING"
-    color: "#EA580C"
-    bg: "#FFEDD5"
+    color: "#FF8C00"
+    bg: "#FFE4B5"
   low:
     label: "NOTICE"
-    color: "#2563EB"
-    bg: "#DBEAFE"
+    color: "#20B2AA"
+    bg: "#E0FFFF"
   informational:
     label: "INFO"
-    color: "#7C3AED"
-    bg: "#EDE9FE"
+    color: "#4B0082"
+    bg: "#E6E6FA"
   update_available:
     label: "UPDATE"
-    color: "#16A34A"
-    bg: "#DCFCE7"
+    color: "#00CED1"
+    bg: "#AFEEEE"
 
 # Branding
 branding:
