@@ -98,10 +98,16 @@ sudo ./claude-snoop.sh --target 192.168.1.0/24 --root true
 - Modes: `discovery` (host sweep), `ports` (service enumeration)
 - Supports `--os-detect` flag to enable OS detection (`-O`) and hostname resolution (`-R`) via nmap
 
+`scripts/external_scan.py` — external port scanner
+- Detects public IP address via external service
+- Scans major ports (80, 443, 8080, etc.) on public IP
+- Returns JSON with public IP and open ports
+- Called concurrently with port scans (non-blocking)
+
 `scripts/orchestrate.py` — scan coordinator
 - Runs discovery scan on target (with optional `--root` for hostname+OS resolution)
 - Runs parallel port scans (configurable workers, default 4; with optional `--root` for OS detection + hostname resolution)
-- Optionally runs external IP scan (concurrent with port scans)
+- Optionally runs external IP scan (concurrent with port scans, enabled by default)
 - Combines results into `output/findings.json`
 
 `scripts/generate_report.py` — report generator
