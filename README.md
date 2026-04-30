@@ -27,9 +27,7 @@ Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 4. **Combine Findings** — Merges discovery + port scan + external scan results into `output/findings.json`
 5. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
 6. **Inject Vulns** — Adds vulnerability findings to `findings.json`
-7. **Read Design** — Reads `config/design.md` for report styling (colors, fonts, spacing, severity badges)
-8. **Generate HTML** — Creates HTML report with inline CSS(HTML + CSS Claude generated) from findings.json data + design.md directive.
-9. **Render PDF** — Calls weasyprint to convert HTML → PDF with:
+7. **Generate PDF Report** — Local Python script (`generate_report.py`) reads findings.json + design.md config, generates styled HTML + PDF via weasyprint with:
    - Cover page (title, target, timestamp)
    - Executive summary (host count, port count, external port count, vuln count)
    - Host discovery table (IP, hostname)
@@ -88,9 +86,10 @@ pip install -r requirements.txt
 
 ## Architecture
 
-**Claude-Centric Orchestration**
+**Hybrid Architecture**
 - `claude-snoop.sh` (wrapper) invokes Claude Code with CLAUDE.md instructions
-- Claude controls entire pipeline: scanning, analysis, report generation
+- Claude handles: vulnerability analysis (training knowledge)
+- Python handles: scanning, orchestration, report generation
 
 **Components**
 
@@ -101,16 +100,22 @@ pip install -r requirements.txt
 `scripts/orchestrate.py` — scan coordinator
 - Runs discovery scan on target
 - Runs parallel port scans (configurable workers, default 4)
+- Optionally runs external IP scan (concurrent with port scans)
 - Combines results into `output/findings.json`
 
-`config/design.md` — report design template
-- YAML config: colors, fonts, spacing, severity badges
-- Markdown sections: layout directives for cover, summary, tables, footer
-- Claude reads this to style the generated HTML report
+`scripts/generate_report.py` — report generator
+- Reads `output/findings.json` + `config/design.md`
+- Generates styled HTML from findings data
+- Calls weasyprint to convert HTML → PDF
+- Handles cover page, tables, severity badges, external ports section
+
+`config/design.md` — report styling config
+- YAML: colors, fonts, spacing, severity badges, branding
+- Python script reads this config to style the report
 
 `CLAUDE.md` — orchestration instructions
-- Instructions for Claude: how to run scans, analyze vulns, generate HTML, call weasyprint
-- Claude is responsible for all orchestration and report generation
+- Instructions for Claude: run scans, analyze vulns, inject findings, trigger report generation
+- Claude focuses on vulnerability analysis (domain expertise)
 
 ---
 
@@ -125,10 +130,14 @@ Analysis uses Claude's training knowledge — no external API calls.
 
 ---
 
+## Design Decisions
+
+**Local HTML Generation** — Report generation (HTML + PDF) moved from Claude to Python (`generate_report.py`). Previously, Claude generated HTML+CSS from scratch on every run, consuming significant tokens. Local generation via Python template approach is faster and cheaper, letting Claude focus on high-value vulnerability analysis.
+
 ## Known Limitations
 
-- **MAC Addresses** — Not captured in discovery results. Nmap's host discovery scan does not return MAC address data in most environments (Docker, VMs, certain network configs). Nmap also wants to be root to grab MAC's, and I refuse to have Claude run as root on any system.
-- **Token Utilization** — This tool uses tokens, there are alternatives that make external API calls for vuln/update discovery, and better local-written talent for report generation(instead of having claude write HTML+CSS every time). But, I'm a script kiddie so here we are.
+- **MAC Addresses** — Not captured in discovery results. Nmap's host discovery scan does not return MAC address data in most environments (Docker, VMs, certain network configs). Nmap also wants to be root to grab MAC's, and we refuse to run as root.
+- **Vulnerability Data** — Currently uses Claude's training knowledge only. Future: external CVE/update APIs (NVD, etc.) could be integrated for real-time accuracy.
 
 ---
 
