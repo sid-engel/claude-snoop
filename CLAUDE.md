@@ -76,7 +76,7 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
 - `--title` (optional): Report title (default: `"Audit — <TARGET>"`)
 - `--workers` (optional): Number of parallel port scan workers (default: 4, use 1 for sequential)
 - `--external` (optional): Scan public IP for open ports (default: true, use `false` to disable)
-- `--root` (optional): Enable OS detection with nmap `-O` flag (default: false, requires root/sudo)
+- `--root` (optional): Enable OS detection (`-O` flag) and hostname resolution via reverse DNS (`-R` flag) (default: false, requires root/sudo)
 
 ## Output
 
