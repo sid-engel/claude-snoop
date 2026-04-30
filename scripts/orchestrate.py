@@ -134,7 +134,7 @@ def main():
     print(f"    External scan: {'enabled' if args.external else 'disabled'}")
     print(f"    Output: {args.output}")
 
-    # Step 1: Discovery
+    # Step 1: Host discovery
     discovery_output = run_discovery(args.target)
     discovery_results = discovery_output.get("results", [])
 
@@ -144,9 +144,10 @@ def main():
 
     print(f"[+] Found {len(discovery_results)} host(s)")
 
-    # Step 2: Parallel port scans
+    # Step 2: Parallel port scans + external scan (concurrent)
     print(f"[*] Scanning open ports ({args.workers} parallel workers)...")
     port_outputs = []
+    external_output = None
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         # Submit all scan tasks
@@ -155,20 +156,24 @@ def main():
             ip = host.get("ip")
             if ip:
                 future = executor.submit(run_port_scan, ip)
-                futures[future] = ip
+                futures[future] = ("port", ip)
+
+        # Submit external scan concurrently if enabled
+        if args.external:
+            external_future = executor.submit(run_external_scan)
+            futures[external_future] = ("external", None)
 
         # Collect results as they complete
         for future in as_completed(futures):
-            ip, output = future.result()
-            port_outputs.append(output)
-            print(f"    [+] {ip} complete")
+            task_type, task_id = futures[future]
+            if task_type == "port":
+                ip, output = future.result()
+                port_outputs.append(output)
+                print(f"    [+] {ip} complete")
+            elif task_type == "external":
+                external_output = future.result()
 
-    # Step 3: Optional external scan
-    external_output = None
-    if args.external:
-        external_output = run_external_scan()
-
-    # Step 4: Combine findings
+    # Step 3: Combine findings
     combined = combine_findings(args.target, discovery_output, port_outputs, external_output)
 
     # Count open ports
@@ -181,7 +186,7 @@ def main():
     if "external" in combined:
         external_ports = len(combined["external"].get("open_ports", []))
 
-    # Step 5: Write findings
+    # Step 4: Write findings
     findings_path = output_dir / "findings.json"
     findings_path.write_text(json.dumps(combined, indent=2))
     print(f"[+] Findings written to {findings_path}")
