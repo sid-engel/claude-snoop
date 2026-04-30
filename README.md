@@ -21,11 +21,11 @@ Output → `output/report.pdf`
 
 Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 
-1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet (optionally with reverse DNS for hostnames via `--root true`)
-2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers; optionally with OS detection and hostname resolution via `--root true`)
+1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet (optionally with OS detection and hostname resolution via `--root true`)
+2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers)
 3. **External Scan** (optional) — Detects public IP and scans major ports externally (enabled by default, can be disabled with `--external false`)
 4. **Combine Findings** — Merges discovery + port scan + external scan results into `output/findings.json`
-5. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
+5. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using Claude training knowledge
 6. **Inject Vulns** — Adds vulnerability findings to `findings.json`
 7. **Generate PDF Report** — Local Python script (`generate_report.py`) reads findings.json + design.md config, generates styled HTML + PDF via weasyprint with:
    - Cover page (title, target, timestamp)
@@ -71,9 +71,7 @@ pip install -r requirements.txt
 **Examples:**
 ```bash
 ./claude-snoop.sh --target 192.168.1.0/24
-./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit"
-./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit" --workers 8
-./claude-snoop.sh --target 192.168.1.0/24 --external false
+./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit" --workers 8 --external false
 sudo ./claude-snoop.sh --target 192.168.1.0/24 --root true
 ```
 
@@ -82,7 +80,7 @@ sudo ./claude-snoop.sh --target 192.168.1.0/24 --root true
 ## Output Files
 
 - `output/findings.json` — Raw scan results + vulnerability analysis in JSON
-- `output/report.pdf` — Formatted audit report with tables and styling
+- `output/report.pdf` — Formatted audit report with tables and styling(configurable via config/DESIGN.md
 
 ---
 
@@ -101,7 +99,7 @@ sudo ./claude-snoop.sh --target 192.168.1.0/24 --root true
 - Supports `--os-detect` flag to enable OS detection (`-O`) and hostname resolution (`-R`) via nmap
 
 `scripts/orchestrate.py` — scan coordinator
-- Runs discovery scan on target (with optional `--root` for hostname resolution)
+- Runs discovery scan on target (with optional `--root` for hostname+OS resolution)
 - Runs parallel port scans (configurable workers, default 4; with optional `--root` for OS detection + hostname resolution)
 - Optionally runs external IP scan (concurrent with port scans)
 - Combines results into `output/findings.json`
