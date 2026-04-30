@@ -7,8 +7,14 @@ You are the orchestrator for claude-snoop, a network audit tool. When the user p
 Run the orchestration script with a target. It handles everything:
 
 ```bash
-python3 scripts/orchestrate.py --target <TARGET> [--output <PDF_PATH>] [--title "<TITLE>"] [--workers N] [--external true/false]
+python3 scripts/orchestrate.py --target <TARGET> [--output <PDF_PATH>] [--title "<TITLE>"] [--workers N] [--external true/false] [--root true/false]
 ```
+
+**Check the user's request for these options** and include them in the command:
+- If they mentioned "root" or running with `sudo`, add `--root true`
+- If they mentioned disabling external scan, add `--external false`
+- If they mentioned a custom number of workers, add `--workers N`
+- If they provided a title, use `--title "<TITLE>"`
 
 The orchestrator will:
 1. Run discovery scan to find live hosts
@@ -70,6 +76,7 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
 - `--title` (optional): Report title (default: `"Audit — <TARGET>"`)
 - `--workers` (optional): Number of parallel port scan workers (default: 4, use 1 for sequential)
 - `--external` (optional): Scan public IP for open ports (default: true, use `false` to disable)
+- `--root` (optional): Enable OS detection with nmap `-O` flag (default: false, requires root/sudo)
 
 ## Output
 

@@ -126,7 +126,30 @@ def parse_ports(xml: str) -> list[dict]:
                 }
                 ports.append(port_entry)
 
-        results.append({"ip": ip, "open_ports": ports})
+        # Extract OS info (best match by accuracy)
+        os_info = None
+        os_elem = host.find("os")
+        if os_elem is not None:
+            osmatch_list = os_elem.findall("osmatch")
+            if osmatch_list:
+                # Get osmatch with highest accuracy
+                best_match = max(
+                    osmatch_list,
+                    key=lambda m: float(m.get("accuracy", 0)),
+                )
+                os_name = best_match.get("name")
+                os_accuracy = best_match.get("accuracy")
+                if os_name:
+                    os_info = {
+                        "name": os_name,
+                        "accuracy": float(os_accuracy) if os_accuracy else 0,
+                    }
+
+        results.append({
+            "ip": ip,
+            "open_ports": ports,
+            "os": os_info,
+        })
 
     return results
 
@@ -206,6 +229,11 @@ def main():
         help="Scan mode",
     )
     parser.add_argument(
+        "--os-detect",
+        action="store_true",
+        help="Enable OS detection and hostname resolution (requires root)",
+    )
+    parser.add_argument(
         "--list-modes",
         action="store_true",
         help="List available scan modes and exit",
@@ -224,7 +252,15 @@ def main():
         sys.exit(1)
 
     mode_config = SCAN_MODES[args.mode]
-    xml_output = run_nmap(args.target, mode_config["flags"])
+    flags = mode_config["flags"].copy()
+
+    # Add flags based on mode and os_detect flag
+    if args.os_detect:
+        if args.mode == "ports":
+            flags.append("-O")  # OS detection (requires root)
+        flags.append("-R")  # Force reverse DNS resolution for all hosts (works in any mode)
+
+    xml_output = run_nmap(args.target, flags)
 
     if args.mode == "discovery":
         data = parse_discovery(xml_output)

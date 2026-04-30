@@ -21,8 +21,8 @@ Output → `output/report.pdf`
 
 Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 
-1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet
-2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers)
+1. **Discovery** — Runs nmap host discovery scan to find live IPs on subnet (optionally with reverse DNS for hostnames via `--root true`)
+2. **Port Scan** — Runs nmap service enumeration on each host (parallel, configurable workers; optionally with OS detection and hostname resolution via `--root true`)
 3. **External Scan** (optional) — Detects public IP and scans major ports externally (enabled by default, can be disabled with `--external false`)
 4. **Combine Findings** — Merges discovery + port scan + external scan results into `output/findings.json`
 5. **Vulnerability Analysis** — Analyzes detected service versions for known CVEs, critical vulns, available updates using training knowledge
@@ -30,7 +30,7 @@ Shell wrapper invokes Claude Code with instructions from CLAUDE.md. Claude then:
 7. **Generate PDF Report** — Local Python script (`generate_report.py`) reads findings.json + design.md config, generates styled HTML + PDF via weasyprint with:
    - Cover page (title, target, timestamp)
    - Executive summary (host count, port count, external port count, vuln count)
-   - Host discovery table (IP, hostname)
+   - Host discovery table (IP, hostname, operating system)
    - Open ports & services per host (port, protocol, product, version)
    - External ports scan (if public ports found)
    - Vulnerabilities & updates per service (CVE, severity, details)
@@ -66,6 +66,7 @@ pip install -r requirements.txt
 - `--title <title>` — Report title (default: `"Network Audit — <TARGET>"`)
 - `--workers <N>` — Parallel port scan workers (default: `4`)
 - `--external true|false` — Scan public IP for open ports (default: `true`)
+- `--root true|false` — Enable OS detection and hostname resolution via reverse DNS (default: `false`, requires root/sudo)
 
 **Examples:**
 ```bash
@@ -73,6 +74,7 @@ pip install -r requirements.txt
 ./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit"
 ./claude-snoop.sh --target 192.168.1.0/24 --title "Acme Corp Audit" --workers 8
 ./claude-snoop.sh --target 192.168.1.0/24 --external false
+sudo ./claude-snoop.sh --target 192.168.1.0/24 --root true
 ```
 
 ---
@@ -96,10 +98,11 @@ pip install -r requirements.txt
 `scripts/scan.py` — nmap wrapper
 - Parses nmap XML output to JSON
 - Modes: `discovery` (host sweep), `ports` (service enumeration)
+- Supports `--os-detect` flag to enable OS detection (`-O`) and hostname resolution (`-R`) via nmap
 
 `scripts/orchestrate.py` — scan coordinator
-- Runs discovery scan on target
-- Runs parallel port scans (configurable workers, default 4)
+- Runs discovery scan on target (with optional `--root` for hostname resolution)
+- Runs parallel port scans (configurable workers, default 4; with optional `--root` for OS detection + hostname resolution)
 - Optionally runs external IP scan (concurrent with port scans)
 - Combines results into `output/findings.json`
 
@@ -134,9 +137,10 @@ Analysis uses Claude's training knowledge — no external API calls.
 
 **Local HTML Generation** — Report generation (HTML + PDF) moved from Claude to Python (`generate_report.py`). Previously, Claude generated HTML+CSS from scratch on every run, consuming significant tokens. Local generation via Python template approach is faster and cheaper, letting Claude focus on high-value vulnerability analysis.
 
-## Known Limitations
+## Known Limitations & Notes
 
-- **MAC Addresses** — Not captured in discovery results. Nmap's host discovery scan does not return MAC address data in most environments (Docker, VMs, certain network configs). Nmap also wants to be root to grab MAC's, and we refuse to run as root.
+- **OS Detection & Hostname Resolution** — Require `--root true` flag (run with sudo). OS detection uses nmap's TCP/IP fingerprinting (`-O` flag), hostname resolution uses reverse DNS (`-R` flag). Some devices (embedded systems, network appliances) may not fingerprint reliably or may lack reverse DNS records.
+- **MAC Addresses** — Available in discovery results only with `--root true` flag. Regular scans without root won't include MAC addresses.
 - **Vulnerability Data** — Currently uses Claude's training knowledge only. Future: external CVE/update APIs (NVD, etc.) could be integrated for real-time accuracy.
 
 ---

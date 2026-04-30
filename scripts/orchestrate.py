@@ -17,12 +17,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def run_discovery(target: str) -> dict:
+def run_discovery(target: str, root: bool = False) -> dict:
     """Run discovery scan, return parsed results."""
     print(f"[*] Discovery scan on {target}...")
     try:
+        cmd = ["python3", "scripts/scan.py", "--target", target, "--mode", "discovery"]
+        if root:
+            cmd.append("--os-detect")  # Also enables -R for hostname detection
         result = subprocess.run(
-            ["python3", "scripts/scan.py", "--target", target, "--mode", "discovery"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -37,11 +40,14 @@ def run_discovery(target: str) -> dict:
         sys.exit(1)
 
 
-def run_port_scan(host_ip: str) -> tuple[str, dict]:
+def run_port_scan(host_ip: str, root: bool = False) -> tuple[str, dict]:
     """Run port scan on single host, return (ip, parsed_results)."""
     try:
+        cmd = ["python3", "scripts/scan.py", "--target", host_ip, "--mode", "ports"]
+        if root:
+            cmd.append("--os-detect")
         result = subprocess.run(
-            ["python3", "scripts/scan.py", "--target", host_ip, "--mode", "ports"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -119,6 +125,7 @@ def main():
     parser.add_argument("--title", help="Report title (defaults to target)")
     parser.add_argument("--workers", type=int, default=4, help="Parallel port scan workers (default: 4)")
     parser.add_argument("--external", type=lambda x: x.lower() in ('true', '1', 'yes'), default=True, help="Scan public IP for open ports (default: true)")
+    parser.add_argument("--root", type=lambda x: x.lower() in ('true', '1', 'yes'), default=False, help="Enable OS detection and hostname resolution (requires root, default: false)")
     args = parser.parse_args()
 
     title = args.title or f"Audit — {args.target}"
@@ -132,10 +139,11 @@ def main():
     print(f"    Target: {args.target}")
     print(f"    Workers: {args.workers}")
     print(f"    External scan: {'enabled' if args.external else 'disabled'}")
+    print(f"    OS detection: {'enabled (requires root)' if args.root else 'disabled'}")
     print(f"    Output: {args.output}")
 
     # Step 1: Host discovery
-    discovery_output = run_discovery(args.target)
+    discovery_output = run_discovery(args.target, args.root)
     discovery_results = discovery_output.get("results", [])
 
     if not discovery_results:
@@ -155,7 +163,7 @@ def main():
         for host in discovery_results:
             ip = host.get("ip")
             if ip:
-                future = executor.submit(run_port_scan, ip)
+                future = executor.submit(run_port_scan, ip, args.root)
                 futures[future] = ("port", ip)
 
         # Submit external scan concurrently if enabled

@@ -170,6 +170,14 @@ def generate_html(findings, config, title):
     external = findings.get('external', {})
     vulns = findings.get('vulns', {}).get('results', [])
 
+    # Build OS lookup from ports data
+    os_by_ip = {}
+    for host_data in ports:
+        ip = host_data.get('ip')
+        os_info = host_data.get('os')
+        if ip and os_info:
+            os_by_ip[ip] = os_info
+
     target = meta.get('target', 'Unknown')
     timestamp = meta.get('timestamp', '')
 
@@ -410,6 +418,7 @@ def generate_html(findings, config, title):
                 <tr>
                     <th>IP</th>
                     <th>Hostname</th>
+                    <th>Operating System</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -420,9 +429,16 @@ def generate_html(findings, config, title):
     discovery_sorted = sorted(discovery, key=lambda x: tuple(map(int, x['ip'].split('.'))))
     for host in discovery_sorted:
         hostname = host.get('hostname') or '—'
+        ip = host['ip']
+        os_info = os_by_ip.get(ip)
+        if os_info:
+            os_display = f"{os_info['name']} ({os_info['accuracy']}%)"
+        else:
+            os_display = '—'
         html += f"""                <tr>
-                    <td>{host['ip']}</td>
+                    <td>{ip}</td>
                     <td>{hostname}</td>
+                    <td>{os_display}</td>
                     <td>Online</td>
                 </tr>
 """
