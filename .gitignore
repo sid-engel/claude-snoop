@@ -1,2 +1,4 @@
 output/
 BUILD.md
+__pycache__/
+*.pyc

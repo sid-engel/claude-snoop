@@ -18,7 +18,7 @@ The orchestrator will:
 
 You (Claude) will then:
 5. Analyze service versions for vulnerabilities and available updates
-6. Generate the PDF report from design.md
+6. Call the report generator to create PDF from findings.json
 
 If no hosts are discovered, the orchestrator stops and tells you.
 
@@ -49,36 +49,19 @@ After orchestrate.py creates `output/findings.json`, you analyze the detected se
 
 ## Report Generation
 
-5. Read `config/design.md` to understand the report design directives (colors, fonts, spacing, layout, severity badges)
-6. Generate HTML from findings.json using design.md styling:
-   - Parse design.md YAML frontmatter into dict. Use `.get()` with defaults when accessing nested keys — don't assume all keys exist
-   - Build HTML with inline CSS per design directives
-   - Render cover page, executive summary, discovery table, ports table, external ports table (if present), vulns table, footer
-   - Use severity badges with colors/labels from design.md
-   - Follow spacing, fonts, colors exactly as specified
-   - Follow all sorting directives from design.md
-   - **CSS safety:** Never use `height: 100vh`, `min-height: 100vh`, or `max-height: 100vh` (weasyprint limitation). Use fixed pixel heights, padding, flexbox centering, or page-break rules instead
-   - **External scan data:** If `findings.external` is present (i.e., external scan was run):
-     - Add "External Ports Scan" section showing public IP
-     - If no open ports found: display "No open ports detected on public IP"
-     - If open ports found: display table with port, protocol, service, product, version (sorted by port number)
-     - Include external port count in executive summary card (only if ports > 0)
-     - Use same table styling as internal ports table
-   - **Cover page CSS:** Use flexbox + padding or fixed height for vertical centering, not viewport height. Example: `display: flex; flex-direction: column; justify-content: center; padding: 80px 40px;` — avoid `height/min-height: 100vh`
-   - **Handle findings properly:** Each finding in vulns.results[].findings[] is either:
-     - CVE finding: has 'cve', 'severity', 'description' keys
-     - Update finding: has 'update_available', 'release_date' keys
-     - Check `if 'cve' in finding` vs `elif 'update_available' in finding` before accessing keys
-     - Don't assume all findings have all keys
-7. Call weasyprint via subprocess to convert HTML to PDF:
+5. Call the report generator to render HTML → PDF:
    ```bash
-   echo "<html>...</html>" | weasyprint - <PDF_PATH>
+   python3 scripts/generate_report.py output/findings.json config/design.md <OUTPUT_PDF> "<TITLE>"
    ```
-   Or write HTML to temp file, then:
-   ```bash
-   weasyprint <HTML_FILE> <PDF_PATH>
-   ```
-   Use same output path and title from orchestrate.py run.
+   - `<OUTPUT_PDF>` — path to output PDF (default: `output/report.pdf`)
+   - `<TITLE>` — report title from user input or default
+   
+   The script handles:
+   - Parsing design.md YAML styling (colors, fonts, spacing, severity badges)
+   - Generating HTML with inline CSS per design directives
+   - Rendering cover page, executive summary, discovery table, ports table, external ports table (if present), vulns table, footer
+   - Calling weasyprint to convert HTML → PDF
+   - All sorting, formatting, and layout per design.md
 
 ## Options
 
