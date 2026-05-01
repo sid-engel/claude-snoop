@@ -10,6 +10,7 @@ Usage:
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 
 # Major ports to scan externally
@@ -154,7 +155,9 @@ def build_output(public_ip: str, open_ports: list[dict]) -> dict:
 
 def main():
     print("[*] Detecting public IP...", file=sys.stderr)
+    ip_start = time.time()
     public_ip = get_public_ip()
+    ip_elapsed = time.time() - ip_start
 
     if not public_ip:
         result = {
@@ -163,16 +166,18 @@ def main():
         print(json.dumps(result, indent=2))
         sys.exit(1)
 
-    print(f"[+] Public IP: {public_ip}", file=sys.stderr)
+    print(f"[+] Public IP: {public_ip} ({ip_elapsed:.1f}s)", file=sys.stderr)
 
     print(f"[*] Scanning {len(MAJOR_PORTS)} major ports...", file=sys.stderr)
+    port_start = time.time()
     open_ports = scan_external_ports(public_ip)
+    port_elapsed = time.time() - port_start
 
     output = build_output(public_ip, open_ports)
     print(json.dumps(output, indent=2))
 
     if open_ports:
-        print(f"[!] {len(open_ports)} open port(s) found externally", file=sys.stderr)
+        print(f"[!] {len(open_ports)} open port(s) found externally ({port_elapsed:.1f}s)", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -26,6 +27,8 @@ SCAN_MODES = {
         "flags": ["-sV", "-T5", "--open", "--top-ports", "100", "--min-rate", "1000"],
     },
 }
+
+SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 
 
 def check_nmap():
@@ -45,12 +48,16 @@ def run_nmap(target: str, flags: list[str]) -> str:
     """Run nmap with XML output and return raw XML."""
     cmd = ["nmap"] + flags + ["-oX", "-", target]
     try:
+        start = time.time()
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             check=True,
         )
+        elapsed = time.time() - start
+        # Show elapsed time to stderr so it doesn't interfere with JSON output
+        print(f"[nmap] scan completed in {elapsed:.1f}s", file=sys.stderr)
         return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"[error] nmap failed: {e.stderr}", file=sys.stderr)

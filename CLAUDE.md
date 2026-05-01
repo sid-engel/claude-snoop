@@ -28,6 +28,12 @@ You (Claude) will then:
 
 If no hosts are discovered, the orchestrator stops and tells you.
 
+**Progress Display:** The orchestrator prints live progress to console as it runs:
+- Discovery elapsed time: `[+] Found N host(s) in Xs`
+- Port scan progress: `[+] IP complete (X/Y)` counter showing current/total hosts
+- Phase timing summary showing discovery, port scans, and external scan durations
+You don't need to provide additional status updates — the output is displayed automatically.
+
 ## Vulnerability Analysis
 
 After orchestrate.py creates `output/findings.json`, you analyze the detected services:

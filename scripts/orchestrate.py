@@ -12,14 +12,26 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 
-def run_discovery(target: str, root: bool = False) -> dict:
-    """Run discovery scan, return parsed results."""
+def format_elapsed(seconds: float) -> str:
+    """Format elapsed time as human-readable string."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    elif seconds < 3600:
+        return f"{seconds / 60:.1f}m"
+    else:
+        return f"{seconds / 3600:.1f}h"
+
+
+def run_discovery(target: str, root: bool = False) -> tuple[dict, float]:
+    """Run discovery scan, return parsed results and elapsed time."""
     print(f"[*] Discovery scan on {target}...")
+    start = time.time()
     try:
         cmd = ["python3", "scripts/scan.py", "--target", target, "--mode", "discovery"]
         if root:
@@ -31,7 +43,8 @@ def run_discovery(target: str, root: bool = False) -> dict:
             check=True,
             timeout=120,
         )
-        return json.loads(result.stdout)
+        elapsed = time.time() - start
+        return json.loads(result.stdout), elapsed
     except subprocess.CalledProcessError as e:
         print(f"[error] Discovery failed: {e.stderr}", file=sys.stderr)
         sys.exit(1)
@@ -62,9 +75,10 @@ def run_port_scan(host_ip: str, root: bool = False) -> tuple[str, dict]:
         return (host_ip, {"meta": {}, "results": []})
 
 
-def run_external_scan() -> dict:
-    """Run external port scan, return parsed results."""
+def run_external_scan() -> tuple[dict, float]:
+    """Run external port scan, return parsed results and elapsed time."""
     print("[*] External scan (public IP + major ports)...")
+    start = time.time()
     try:
         result = subprocess.run(
             ["python3", "scripts/external_scan.py"],
@@ -73,13 +87,16 @@ def run_external_scan() -> dict:
             check=True,
             timeout=300,
         )
-        return json.loads(result.stdout)
+        elapsed = time.time() - start
+        return json.loads(result.stdout), elapsed
     except subprocess.TimeoutExpired:
+        elapsed = time.time() - start
         print(f"[warning] External scan timed out", file=sys.stderr)
-        return {"error": "timeout"}
+        return {"error": "timeout"}, elapsed
     except subprocess.CalledProcessError as e:
+        elapsed = time.time() - start
         print(f"[warning] External scan failed: {e.stderr}", file=sys.stderr)
-        return {"error": str(e)}
+        return {"error": str(e)}, elapsed
 
 
 def combine_findings(target: str, discovery_output: dict, port_outputs: list, external_output: dict = None) -> dict:
@@ -143,19 +160,23 @@ def main():
     print(f"    Output: {args.output}")
 
     # Step 1: Host discovery
-    discovery_output = run_discovery(args.target, args.root)
+    discovery_output, discovery_elapsed = run_discovery(args.target, args.root)
     discovery_results = discovery_output.get("results", [])
 
     if not discovery_results:
         print("[!] No hosts discovered. Exiting.")
         sys.exit(0)
 
-    print(f"[+] Found {len(discovery_results)} host(s)")
+    print(f"[+] Found {len(discovery_results)} host(s) in {format_elapsed(discovery_elapsed)}")
 
     # Step 2: Parallel port scans + external scan (concurrent)
     print(f"[*] Scanning open ports ({args.workers} parallel workers)...")
     port_outputs = []
     external_output = None
+    port_scan_start = time.time()
+    port_scans_completed = 0
+    total_port_scans = len(discovery_results)
+    external_elapsed = 0
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         # Submit all scan tasks
@@ -177,9 +198,12 @@ def main():
             if task_type == "port":
                 ip, output = future.result()
                 port_outputs.append(output)
-                print(f"    [+] {ip} complete")
+                port_scans_completed += 1
+                print(f"    [+] {ip} complete ({port_scans_completed}/{total_port_scans})")
             elif task_type == "external":
-                external_output = future.result()
+                external_output, external_elapsed = future.result()
+
+    port_scans_elapsed = time.time() - port_scan_start
 
     # Step 3: Combine findings
     combined = combine_findings(args.target, discovery_output, port_outputs, external_output)
@@ -202,10 +226,11 @@ def main():
     # Report results
     print()
     print(f"[✓] Discovery & port scans complete")
-    print(f"    Hosts discovered: {len(discovery_results)}")
+    print(f"    Hosts discovered: {len(discovery_results)} ({format_elapsed(discovery_elapsed)})")
+    print(f"    Port scans: {format_elapsed(port_scans_elapsed)}")
     print(f"    Open ports found: {total_ports}")
     if external_ports > 0:
-        print(f"    External ports open: {external_ports}")
+        print(f"    External ports open: {external_ports} ({format_elapsed(external_elapsed)})")
     print(f"    Findings: {findings_path}")
     print(f"[*] Claude will now analyze vulnerabilities and generate the PDF report...")
 
