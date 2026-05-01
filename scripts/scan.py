@@ -154,56 +154,6 @@ def parse_ports(xml: str) -> list[dict]:
     return results
 
 
-def parse_vulns(xml: str) -> list[dict]:
-    """Parse vuln script output into structured findings."""
-    root = ET.fromstring(xml)
-    results = []
-
-    for host in root.findall("host"):
-        status = host.find("status")
-        if status is None or status.get("state") != "up":
-            continue
-
-        ip = None
-        for addr in host.findall("address"):
-            if addr.get("addrtype") == "ipv4":
-                ip = addr.get("addr")
-
-        if not ip:
-            continue
-
-        findings = []
-        ports_elem = host.find("ports")
-        if ports_elem is not None:
-            for port in ports_elem.findall("port"):
-                port_id = port.get("portid")
-                for script in port.findall("script"):
-                    script_id = script.get("id")
-                    output = script.get("output", "")
-
-                    # Basic severity heuristic based on script name/output
-                    severity = "informational"
-                    output_lower = output.lower()
-                    if any(w in output_lower for w in ["vulnerable", "critical", "exploit"]):
-                        severity = "high"
-                    elif any(w in output_lower for w in ["warning", "weak", "deprecated"]):
-                        severity = "medium"
-                    elif any(w in output_lower for w in ["state:", "detected", "enabled"]):
-                        severity = "low"
-
-                    findings.append({
-                        "port": int(port_id),
-                        "script": script_id,
-                        "output": output.strip(),
-                        "severity": severity,
-                    })
-
-        if findings:
-            results.append({"ip": ip, "findings": findings})
-
-    return results
-
-
 def build_output(mode: str, target: str, data: list) -> dict:
     """Wrap results in a standard envelope."""
     return {
@@ -264,14 +214,8 @@ def main():
 
     if args.mode == "discovery":
         data = parse_discovery(xml_output)
-    elif args.mode == "ports":
-        data = parse_ports(xml_output)
-    elif args.mode == "vulns":
-        data = parse_vulns(xml_output)
-    elif args.mode == "quick":
-        data = parse_ports(xml_output)  # quick uses port parser
     else:
-        data = []
+        data = parse_ports(xml_output)
 
     output = build_output(args.mode, args.target, data)
     print(json.dumps(output, indent=2))
