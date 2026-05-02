@@ -95,10 +95,6 @@ def parse_design_md(design_path):
 
     return config
 
-def get_color(config, key, default='#000000'):
-    """Get color from config with fallback"""
-    return config.get('colors', {}).get(key, default)
-
 def get_severity_config(config, severity):
     """Get severity config with fallback defaults"""
     defaults = {

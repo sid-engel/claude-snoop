@@ -190,17 +190,7 @@ def main():
         action="store_true",
         help="Enable OS detection and hostname resolution (requires root)",
     )
-    parser.add_argument(
-        "--list-modes",
-        action="store_true",
-        help="List available scan modes and exit",
-    )
     args = parser.parse_args()
-
-    if args.list_modes:
-        for mode, config in SCAN_MODES.items():
-            print(f"  {mode:12} {config['description']}")
-        sys.exit(0)
 
     if not check_nmap():
         print(json.dumps({
